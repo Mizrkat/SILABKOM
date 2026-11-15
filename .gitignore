@@ -1,0 +1,31 @@
+# Node.js / Backend
+backend/node_modules/
+backend/.env
+backend/.env.local
+backend/npm-debug.log*
+
+# Flutter / Frontend
+frontend/.dart_tool/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/.packages
+frontend/build/
+frontend/.pub-cache/
+frontend/.pub/
+
+# Android
+frontend/android/.gradle/
+frontend/android/local.properties
+frontend/android/app/build/
+frontend/android/gradle/wrapper/gradle-wrapper.jar
+
+# Binaries
+*.apk
+*.aab
+
+# IDE & OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

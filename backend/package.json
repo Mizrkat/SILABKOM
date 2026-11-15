@@ -1,0 +1,27 @@
+{
+  "name": "lab-inventory-backend",
+  "version": "1.0.0",
+  "description": "RESTful API Sistem Manajemen Inventaris dan Peminjaman Komponen Laboratorium Sistem Komputer UNDIP",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "keywords": [
+    "express",
+    "rest-api",
+    "flutter",
+    "supabase",
+    "postgresql",
+    "undip"
+  ],
+  "author": "Teknik Komputer UNDIP",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.48.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
+  }
+}
