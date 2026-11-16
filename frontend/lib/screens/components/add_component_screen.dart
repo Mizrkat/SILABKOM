@@ -4,7 +4,14 @@ import '../../core/constants/api_endpoints.dart';
 import '../../core/network/api_client.dart';
 
 class AddComponentScreen extends StatefulWidget {
-  const AddComponentScreen({super.key});
+  final bool isEmbedded;
+  final VoidCallback? onModuleAdded;
+
+  const AddComponentScreen({
+    super.key,
+    this.isEmbedded = false,
+    this.onModuleAdded,
+  });
 
   @override
   State<AddComponentScreen> createState() => _AddComponentScreenState();
@@ -67,7 +74,20 @@ class _AddComponentScreenState extends State<AddComponentScreen> {
           backgroundColor: AppColors.statusApproved,
         ),
       );
-      Navigator.pop(context, true);
+
+      if (widget.isEmbedded) {
+        _nameController.clear();
+        _stockController.clear();
+        _locationController.clear();
+        _descriptionController.clear();
+        _datasheetController.clear();
+        setState(() {
+          _selectedCategory = 'Mikrokontroler';
+        });
+        widget.onModuleAdded?.call();
+      } else {
+        Navigator.pop(context, true);
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -90,6 +110,7 @@ class _AddComponentScreenState extends State<AddComponentScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        automaticallyImplyLeading: !widget.isEmbedded,
         title: const Text(
           'Tambah Modul Baru',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),

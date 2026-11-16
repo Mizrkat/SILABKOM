@@ -336,21 +336,6 @@ class _BorrowRequestScreenState extends State<BorrowRequestScreen> {
         ),
         backgroundColor: AppColors.primary,
         actions: [
-          if (_isAssistant)
-            IconButton(
-              icon: Icon(
-                _showTrash ? Icons.inventory_2_outlined : Icons.delete_sweep_outlined,
-                color: Colors.white,
-              ),
-              tooltip: _showTrash ? 'Lihat Antrean Aktif' : 'Lihat Arsip Terhapus (Trash)',
-              onPressed: () {
-                setState(() {
-                  _showTrash = !_showTrash;
-                  _selectedStatus = 'Semua';
-                });
-                _fetchLoans();
-              },
-            ),
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
             tooltip: 'Segarkan Antrean',

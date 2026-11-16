@@ -5,7 +5,6 @@ import '../../core/network/api_client.dart';
 import '../../core/utils/session_manager.dart';
 import '../../models/component_model.dart';
 import 'component_detail_screen.dart';
-import 'add_component_screen.dart';
 
 class ComponentListScreen extends StatefulWidget {
   const ComponentListScreen({super.key});
@@ -318,20 +317,6 @@ class _ComponentListScreenState extends State<ComponentListScreen> {
           ],
         ),
         actions: [
-          if (_isAssistant)
-            IconButton(
-              icon: Icon(
-                _showTrash ? Icons.inventory_2_outlined : Icons.delete_sweep_outlined,
-                color: Colors.white,
-              ),
-              tooltip: _showTrash ? 'Lihat Katalog Aktif' : 'Lihat Arsip Terhapus (Trash)',
-              onPressed: () {
-                setState(() {
-                  _showTrash = !_showTrash;
-                });
-                _fetchComponents();
-              },
-            ),
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
             tooltip: 'Segarkan Data',
@@ -339,23 +324,7 @@ class _ComponentListScreenState extends State<ComponentListScreen> {
           ),
         ],
       ),
-      floatingActionButton: _isAssistant
-          ? FloatingActionButton.extended(
-              onPressed: () async {
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AddComponentScreen()),
-                );
-                if (result == true) {
-                  _fetchComponents();
-                }
-              },
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.add),
-              label: const Text('Tambah Modul'),
-            )
-          : null,
+      floatingActionButton: null,
       body: RefreshIndicator(
         onRefresh: _fetchComponents,
         color: AppColors.primary,

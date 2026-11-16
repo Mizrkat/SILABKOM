@@ -3,6 +3,8 @@ import '../../core/constants/app_colors.dart';
 import '../../core/utils/session_manager.dart';
 import '../components/component_list_screen.dart';
 import '../loans/borrow_request_screen.dart';
+import '../components/add_component_screen.dart';
+import '../archive/archive_screen.dart';
 import '../profile/profile_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -15,6 +17,10 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
   String _userRole = 'student';
+
+  int _catalogRefreshKey = 0;
+  int _loansRefreshKey = 0;
+  int _archiveRefreshKey = 0;
 
   @override
   void initState() {
@@ -31,21 +37,105 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     }
   }
 
-  int _catalogRefreshKey = 0;
-  int _loansRefreshKey = 0;
+  List<Widget> _getScreens(bool isAssistant) {
+    if (isAssistant) {
+      return [
+        ComponentListScreen(key: ValueKey('catalog_$_catalogRefreshKey')),
+        BorrowRequestScreen(key: ValueKey('loans_$_loansRefreshKey')),
+        AddComponentScreen(
+          key: const ValueKey('add_component_screen'),
+          isEmbedded: true,
+          onModuleAdded: () {
+            setState(() {
+              _currentIndex = 0;
+              _catalogRefreshKey++;
+            });
+          },
+        ),
+        ArchiveScreen(
+          key: ValueKey('archive_$_archiveRefreshKey'),
+          onRestored: () {
+            setState(() {
+              _catalogRefreshKey++;
+              _loansRefreshKey++;
+            });
+          },
+        ),
+        const ProfileScreen(),
+      ];
+    }
 
-  List<Widget> get _screens => [
-    ComponentListScreen(key: ValueKey('catalog_$_catalogRefreshKey')),
-    BorrowRequestScreen(key: ValueKey('loans_$_loansRefreshKey')),
-    const ProfileScreen(),
-  ];
+    // Role Mahasiswa (TIDAK DIRUBAH SAMA SEKALI)
+    return [
+      ComponentListScreen(key: ValueKey('catalog_$_catalogRefreshKey')),
+      BorrowRequestScreen(key: ValueKey('loans_$_loansRefreshKey')),
+      const ProfileScreen(),
+    ];
+  }
+
+  List<NavigationDestination> _getDestinations(bool isAssistant) {
+    if (isAssistant) {
+      return const [
+        NavigationDestination(
+          icon: Icon(Icons.inventory_2_outlined, color: AppColors.textSecondary),
+          selectedIcon: Icon(Icons.inventory_2, color: AppColors.primary),
+          label: 'Katalog Modul',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.assignment_outlined, color: AppColors.textSecondary),
+          selectedIcon: Icon(Icons.assignment, color: AppColors.primary),
+          label: 'Antrean Pinjam',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.add_circle_outline, color: AppColors.textSecondary),
+          selectedIcon: Icon(Icons.add_circle, color: AppColors.primary),
+          label: 'Tambah Barang',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.delete_sweep_outlined, color: AppColors.textSecondary),
+          selectedIcon: Icon(Icons.delete_sweep, color: AppColors.primary),
+          label: 'Arsip Lab',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.person_outline, color: AppColors.textSecondary),
+          selectedIcon: Icon(Icons.person, color: AppColors.primary),
+          label: 'Profil & Lab',
+        ),
+      ];
+    }
+
+    // Role Mahasiswa (TIDAK DIRUBAH SAMA SEKALI)
+    return const [
+      NavigationDestination(
+        icon: Icon(Icons.inventory_2_outlined, color: AppColors.textSecondary),
+        selectedIcon: Icon(Icons.inventory_2, color: AppColors.primary),
+        label: 'Katalog Modul',
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.assignment_outlined, color: AppColors.textSecondary),
+        selectedIcon: Icon(Icons.assignment, color: AppColors.primary),
+        label: 'Peminjaman',
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.person_outline, color: AppColors.textSecondary),
+        selectedIcon: Icon(Icons.person, color: AppColors.primary),
+        label: 'Profil & Lab',
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
+    final bool isAssistant = _userRole == 'assistant';
+    final screens = _getScreens(isAssistant);
+    final destinations = _getDestinations(isAssistant);
+
+    final safeIndex = _currentIndex >= screens.length ? 0 : _currentIndex;
+
     return Scaffold(
       body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+        index: safeIndex,
+        children: screens,
       ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
@@ -54,34 +144,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           ),
         ),
         child: NavigationBar(
-          selectedIndex: _currentIndex,
+          selectedIndex: safeIndex,
           onDestinationSelected: (int index) {
             setState(() {
               _currentIndex = index;
               if (index == 0) _catalogRefreshKey++;
               if (index == 1) _loansRefreshKey++;
+              if (isAssistant && index == 3) _archiveRefreshKey++;
             });
           },
           backgroundColor: AppColors.surface,
           indicatorColor: AppColors.primaryLight.withValues(alpha: 0.18),
           elevation: 4,
-          destinations: [
-            const NavigationDestination(
-              icon: Icon(Icons.inventory_2_outlined, color: AppColors.textSecondary),
-              selectedIcon: Icon(Icons.inventory_2, color: AppColors.primary),
-              label: 'Katalog Modul',
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.assignment_outlined, color: AppColors.textSecondary),
-              selectedIcon: const Icon(Icons.assignment, color: AppColors.primary),
-              label: _userRole == 'assistant' ? 'Antrean Pinjam' : 'Peminjaman',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.person_outline, color: AppColors.textSecondary),
-              selectedIcon: Icon(Icons.person, color: AppColors.primary),
-              label: 'Profil & Lab',
-            ),
-          ],
+          destinations: destinations,
         ),
       ),
     );
