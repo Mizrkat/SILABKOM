@@ -79,37 +79,37 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         NavigationDestination(
           icon: Icon(Icons.inventory_2_outlined, color: AppColors.textSecondary),
           selectedIcon: Icon(Icons.inventory_2, color: AppColors.primary),
-          label: 'Katalog Modul',
+          label: 'Katalog',
         ),
         NavigationDestination(
           icon: Icon(Icons.assignment_outlined, color: AppColors.textSecondary),
           selectedIcon: Icon(Icons.assignment, color: AppColors.primary),
-          label: 'Antrean Pinjam',
+          label: 'Antrean',
         ),
         NavigationDestination(
           icon: Icon(Icons.add_circle_outline, color: AppColors.textSecondary),
           selectedIcon: Icon(Icons.add_circle, color: AppColors.primary),
-          label: 'Tambah Barang',
+          label: 'Tambah',
         ),
         NavigationDestination(
           icon: Icon(Icons.delete_sweep_outlined, color: AppColors.textSecondary),
           selectedIcon: Icon(Icons.delete_sweep, color: AppColors.primary),
-          label: 'Arsip Lab',
+          label: 'Arsip',
         ),
         NavigationDestination(
           icon: Icon(Icons.person_outline, color: AppColors.textSecondary),
           selectedIcon: Icon(Icons.person, color: AppColors.primary),
-          label: 'Profil & Lab',
+          label: 'Profil',
         ),
       ];
     }
 
-    // Role Mahasiswa (TIDAK DIRUBAH SAMA SEKALI)
+    // Role Mahasiswa
     return const [
       NavigationDestination(
         icon: Icon(Icons.inventory_2_outlined, color: AppColors.textSecondary),
         selectedIcon: Icon(Icons.inventory_2, color: AppColors.primary),
-        label: 'Katalog Modul',
+        label: 'Katalog',
       ),
       NavigationDestination(
         icon: Icon(Icons.assignment_outlined, color: AppColors.textSecondary),
@@ -119,7 +119,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       NavigationDestination(
         icon: Icon(Icons.person_outline, color: AppColors.textSecondary),
         selectedIcon: Icon(Icons.person, color: AppColors.primary),
-        label: 'Profil & Lab',
+        label: 'Profil',
       ),
     ];
   }
