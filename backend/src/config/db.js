@@ -41,7 +41,8 @@ function isColumnMissingError(err) {
       err.message.includes('column') ||
       err.message.includes('schema cache') ||
       err.message.includes('is_deleted') ||
-      err.message.includes('deleted_at')
+      err.message.includes('deleted_at') ||
+      err.message.includes('avatar')
     ))
   );
 }
@@ -56,6 +57,7 @@ const localUsers = [
     nim_nip: '21120124120017',
     password: 'mahasiswa123',
     role: 'student',
+    avatar: null,
     created_at: new Date().toISOString()
   },
   {
@@ -64,6 +66,7 @@ const localUsers = [
     nim_nip: '199801012023011001',
     password: 'asisten123',
     role: 'assistant',
+    avatar: null,
     created_at: new Date().toISOString()
   }
 ];
@@ -182,17 +185,164 @@ const dbService = {
 
   async getUserById(id) {
     if (supabase) {
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, name, nim_nip, role, created_at')
-        .eq('id', id)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('id, name, nim_nip, role, avatar, created_at')
+          .eq('id', id)
+          .maybeSingle();
+        if (error) {
+          if (isColumnMissingError(error)) {
+            const { data: fbData, error: fbErr } = await supabase
+              .from('users')
+              .select('id, name, nim_nip, role, created_at')
+              .eq('id', id)
+              .maybeSingle();
+            if (fbErr) throw fbErr;
+            return fbData ? { ...fbData, avatar: null } : null;
+          }
+          throw error;
+        }
+        return data;
+      } catch (err) {
+        if (isColumnMissingError(err)) {
+          const { data: fbData, error: fbErr } = await supabase
+            .from('users')
+            .select('id, name, nim_nip, role, created_at')
+            .eq('id', id)
+            .maybeSingle();
+          if (fbErr) throw fbErr;
+          return fbData ? { ...fbData, avatar: null } : null;
+        }
+        throw err;
+      }
     }
     const u = localUsers.find(u => u.id === id);
     if (!u) return null;
     const { password, ...safeUser } = u;
+    return safeUser;
+  },
+
+  async createUser({ name, nim_nip, password, role = 'student', avatar = null }) {
+    const id = crypto.randomUUID ? crypto.randomUUID() : 'u-' + Date.now();
+    const now = new Date().toISOString();
+
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .insert({
+            name,
+            nim_nip,
+            password,
+            role,
+            avatar,
+            created_at: now
+          })
+          .select('id, name, nim_nip, role, avatar, created_at')
+          .single();
+
+        if (error) {
+          if (isColumnMissingError(error)) {
+            const { data: fbData, error: fbErr } = await supabase
+              .from('users')
+              .insert({
+                name,
+                nim_nip,
+                password,
+                role,
+                created_at: now
+              })
+              .select('id, name, nim_nip, role, created_at')
+              .single();
+            if (fbErr) throw fbErr;
+            return { ...fbData, avatar: null };
+          }
+          throw error;
+        }
+        return data;
+      } catch (err) {
+        if (isColumnMissingError(err)) {
+          const { data: fbData, error: fbErr } = await supabase
+            .from('users')
+            .insert({
+              name,
+              nim_nip,
+              password,
+              role,
+              created_at: now
+            })
+            .select('id, name, nim_nip, role, created_at')
+            .single();
+          if (fbErr) throw fbErr;
+          return { ...fbData, avatar: null };
+        }
+        throw err;
+      }
+    }
+
+    const newUser = {
+      id,
+      name,
+      nim_nip,
+      password,
+      role,
+      avatar,
+      created_at: now
+    };
+    localUsers.push(newUser);
+    const { password: _, ...safeUser } = newUser;
+    return safeUser;
+  },
+
+  async updateUser(id, { name, avatar }) {
+    if (supabase) {
+      const updateData = {};
+      if (name !== undefined) updateData.name = name;
+      if (avatar !== undefined) updateData.avatar = avatar;
+
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .update(updateData)
+          .eq('id', id)
+          .select('id, name, nim_nip, role, avatar, created_at')
+          .single();
+
+        if (error) {
+          if (isColumnMissingError(error) && name !== undefined) {
+            const { data: fbData, error: fbErr } = await supabase
+              .from('users')
+              .update({ name })
+              .eq('id', id)
+              .select('id, name, nim_nip, role, created_at')
+              .single();
+            if (fbErr) throw fbErr;
+            return { ...fbData, avatar: avatar || null };
+          }
+          throw error;
+        }
+        return data;
+      } catch (err) {
+        if (isColumnMissingError(err) && name !== undefined) {
+          const { data: fbData, error: fbErr } = await supabase
+            .from('users')
+            .update({ name })
+            .eq('id', id)
+            .select('id, name, nim_nip, role, created_at')
+            .single();
+          if (fbErr) throw fbErr;
+          return { ...fbData, avatar: avatar || null };
+        }
+        throw err;
+      }
+    }
+
+    const user = localUsers.find(u => u.id === id);
+    if (!user) return null;
+    if (name !== undefined) user.name = name;
+    if (avatar !== undefined) user.avatar = avatar;
+    const { password: _, ...safeUser } = user;
     return safeUser;
   },
 

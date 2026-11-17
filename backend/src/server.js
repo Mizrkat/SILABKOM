@@ -31,7 +31,10 @@ app.get('/', (req, res) => {
     author: 'Teknik Komputer UNDIP - Praktikum PPB 2026',
     endpoints: {
       auth: {
-        login: 'POST /api/auth/login'
+        login: 'POST /api/auth/login',
+        register: 'POST /api/auth/register',
+        updateProfile: 'PUT /api/auth/profile',
+        getProfile: 'GET /api/auth/profile/:id'
       },
       components: {
         getAll: 'GET /api/components?search=&category=',

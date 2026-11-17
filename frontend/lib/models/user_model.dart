@@ -3,6 +3,7 @@ class UserModel {
   final String name;
   final String nimNip;
   final String role; // 'student' | 'assistant'
+  final String? avatar;
   final String? createdAt;
 
   UserModel({
@@ -10,6 +11,7 @@ class UserModel {
     required this.name,
     required this.nimNip,
     required this.role,
+    this.avatar,
     this.createdAt,
   });
 
@@ -24,6 +26,7 @@ class UserModel {
       name: json['name']?.toString() ?? '',
       nimNip: json['nim_nip']?.toString() ?? '',
       role: json['role']?.toString() ?? 'student',
+      avatar: json['avatar']?.toString(),
       createdAt: json['created_at']?.toString(),
     );
   }
@@ -34,6 +37,7 @@ class UserModel {
       'name': name,
       'nim_nip': nimNip,
       'role': role,
+      'avatar': avatar,
       'created_at': createdAt,
     };
   }

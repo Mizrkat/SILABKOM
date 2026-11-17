@@ -7,6 +7,7 @@ class SessionManager {
   static const String _keyUserName = 'user_name';
   static const String _keyUserNim = 'user_nim_nip';
   static const String _keyUserRole = 'user_role';
+  static const String _keyUserAvatar = 'user_avatar';
   static const String _keyCustomApiUrl = 'custom_api_url';
 
   // Simpan data login pengguna
@@ -15,6 +16,7 @@ class SessionManager {
     required String name,
     required String nimNip,
     required String role,
+    String? avatar,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyIsLoggedIn, true);
@@ -22,6 +24,27 @@ class SessionManager {
     await prefs.setString(_keyUserName, name);
     await prefs.setString(_keyUserNim, nimNip);
     await prefs.setString(_keyUserRole, role);
+    if (avatar != null && avatar.isNotEmpty) {
+      await prefs.setString(_keyUserAvatar, avatar);
+    } else {
+      await prefs.remove(_keyUserAvatar);
+    }
+  }
+
+  // Update nama pengguna saja
+  static Future<void> saveUserName(String name) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyUserName, name);
+  }
+
+  // Update foto profil (avatar) pengguna saja
+  static Future<void> saveUserAvatar(String? avatar) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (avatar != null && avatar.isNotEmpty) {
+      await prefs.setString(_keyUserAvatar, avatar);
+    } else {
+      await prefs.remove(_keyUserAvatar);
+    }
   }
 
   // Cek apakah sudah ada sesi aktif
@@ -48,6 +71,11 @@ class SessionManager {
   static Future<String> getUserRole() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyUserRole) ?? 'student';
+  }
+
+  static Future<String?> getUserAvatar() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyUserAvatar);
   }
 
   static Future<bool> isAssistant() async {
@@ -91,5 +119,6 @@ class SessionManager {
     await prefs.remove(_keyUserName);
     await prefs.remove(_keyUserNim);
     await prefs.remove(_keyUserRole);
+    await prefs.remove(_keyUserAvatar);
   }
 }

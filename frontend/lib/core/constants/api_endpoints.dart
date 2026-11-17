@@ -14,6 +14,9 @@ class ApiEndpoints {
 
   // Endpoint Paths
   static String get login => '$currentBaseUrl/api/auth/login';
+  static String get register => '$currentBaseUrl/api/auth/register';
+  static String get updateProfile => '$currentBaseUrl/api/auth/profile';
+  static String profileById(String id) => '$currentBaseUrl/api/auth/profile/$id';
   static String get components => '$currentBaseUrl/api/components';
   static String componentById(String id) => '$currentBaseUrl/api/components/$id';
   static String restoreComponent(String id) => '$currentBaseUrl/api/components/$id/restore';

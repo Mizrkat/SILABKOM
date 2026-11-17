@@ -6,6 +6,7 @@ import '../../core/utils/session_manager.dart';
 import '../../models/user_model.dart';
 import '../../widgets/server_config_dialog.dart';
 import '../navigation/main_navigation_screen.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -53,6 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
           name: user.name,
           nimNip: user.nimNip,
           role: user.role,
+          avatar: user.avatar,
         );
 
         if (!mounted) return;
@@ -340,6 +342,35 @@ class _LoginScreenState extends State<LoginScreen> {
                                       letterSpacing: 0.3,
                                     ),
                                   ),
+                          ),
+                          const SizedBox(height: 18),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text(
+                                'Mahasiswa baru? ',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                                  );
+                                },
+                                child: const Text(
+                                  'Daftar Akun (Sign Up)',
+                                  style: TextStyle(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
