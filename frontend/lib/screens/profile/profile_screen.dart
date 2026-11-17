@@ -429,19 +429,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // User Card
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: const BorderSide(color: AppColors.border),
-              ),
-              color: AppColors.surface,
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  children: [
+            // User Card (Lebar tetap konsisten dan tidak terpengaruh panjang nama)
+            SizedBox(
+              width: double.infinity,
+              child: Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: const BorderSide(color: AppColors.border),
+                ),
+                color: AppColors.surface,
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
                     _buildAvatarWidget(isAssistant),
                     const SizedBox(height: 8),
 
@@ -522,7 +526,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+          ),
+          const SizedBox(height: 16),
 
             // About SILABKOM
             Card(
