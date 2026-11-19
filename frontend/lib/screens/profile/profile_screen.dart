@@ -431,7 +431,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // User Card (Lebar tetap konsisten dan tidak terpengaruh panjang nama)
+            // User Card (Lebar tetap konsisten dan nama 100% center di tengah)
             SizedBox(
               width: double.infinity,
               child: Card(
@@ -441,92 +441,112 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   side: const BorderSide(color: AppColors.border),
                 ),
                 color: AppColors.surface,
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                    _buildAvatarWidget(isAssistant),
-                    const SizedBox(height: 8),
-
-                    // Tombol cepat ganti foto
-                    TextButton.icon(
-                      onPressed: _isUpdating ? null : _showImagePickerOptions,
-                      icon: const Icon(Icons.camera_enhance_outlined, size: 15, color: AppColors.primary),
-                      label: Text(
-                        _userAvatar != null ? 'Ganti Foto Profil' : 'Upload Foto Profil',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+                child: Stack(
+                  children: [
+                    // Tombol edit cepat di pojok kanan atas kartu
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: IconButton(
+                        icon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.textMuted),
+                        tooltip: 'Ganti Nama Mahasiswa',
+                        onPressed: _isUpdating ? null : _showEditNameDialog,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          _buildAvatarWidget(isAssistant),
+                          const SizedBox(height: 8),
 
-                    // Nama Mahasiswa dengan Tombol Edit
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            _userName,
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
+                          // Tombol cepat kustomisasi profil (Foto & Nama)
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 8,
+                            children: [
+                              TextButton.icon(
+                                onPressed: _isUpdating ? null : _showImagePickerOptions,
+                                icon: const Icon(Icons.camera_enhance_outlined, size: 14, color: AppColors.primary),
+                                label: Text(
+                                  _userAvatar != null ? 'Ganti Foto' : 'Upload Foto Profil',
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+                                ),
+                              ),
+                              TextButton.icon(
+                                onPressed: _isUpdating ? null : _showEditNameDialog,
+                                icon: const Icon(Icons.edit_outlined, size: 14, color: AppColors.secondary),
+                                label: const Text(
+                                  'Ganti Nama',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.secondary),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+
+                          // Nama Mahasiswa yang 100% Center Sempurna
+                          InkWell(
+                            onTap: _isUpdating ? null : _showEditNameDialog,
+                            borderRadius: BorderRadius.circular(8),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              child: Text(
+                                _userName,
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 6),
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.secondary),
-                          tooltip: 'Ganti Nama Mahasiswa',
-                          onPressed: _isUpdating ? null : _showEditNameDialog,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
+                          const SizedBox(height: 4),
 
-                    Text(
-                      '${isAssistant ? 'NIP' : 'NIM'}: $_userNim',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w500,
+                          Text(
+                            '${isAssistant ? 'NIP' : 'NIM'}: $_userNim',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isAssistant ? AppColors.primary : AppColors.secondary,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              isAssistant ? 'ASISTEN LABORATORIUM' : 'MAHASISWA',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+
+                          if (_isUpdating) ...[
+                            const SizedBox(height: 14),
+                            const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 12),
-
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: isAssistant ? AppColors.primary : AppColors.secondary,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        isAssistant ? 'ASISTEN LABORATORIUM' : 'MAHASISWA',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-
-                    if (_isUpdating) ...[
-                      const SizedBox(height: 14),
-                      const SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-                      ),
-                    ],
                   ],
                 ),
               ),
             ),
-          ),
           const SizedBox(height: 16),
 
             // About SILABKOM
