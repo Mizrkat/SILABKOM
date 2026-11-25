@@ -1,6 +1,51 @@
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
+
+// Penyimpanan fallback persisten lokal untuk foto profil jika kolom 'avatar' belum dimigrasi di Supabase
+const AVATAR_STORE_DIR = path.join(__dirname, '..', '..', 'data');
+const AVATAR_STORE_FILE = path.join(AVATAR_STORE_DIR, 'avatars.json');
+
+function readAvatarStore() {
+  try {
+    if (!fs.existsSync(AVATAR_STORE_FILE)) return {};
+    const raw = fs.readFileSync(AVATAR_STORE_FILE, 'utf8');
+    return JSON.parse(raw || '{}');
+  } catch (err) {
+    console.warn('⚠️ Gagal membaca avatar store lokal:', err.message);
+    return {};
+  }
+}
+
+function writeAvatarStore(store) {
+  try {
+    if (!fs.existsSync(AVATAR_STORE_DIR)) {
+      fs.mkdirSync(AVATAR_STORE_DIR, { recursive: true });
+    }
+    fs.writeFileSync(AVATAR_STORE_FILE, JSON.stringify(store), 'utf8');
+  } catch (err) {
+    console.warn('⚠️ Gagal menyimpan avatar store lokal:', err.message);
+  }
+}
+
+function getLocalAvatar(userId) {
+  if (!userId) return null;
+  const store = readAvatarStore();
+  return store[userId] || null;
+}
+
+function setLocalAvatar(userId, avatar) {
+  if (!userId) return;
+  const store = readAvatarStore();
+  if (avatar === null || avatar === '') {
+    delete store[userId];
+  } else if (avatar !== undefined) {
+    store[userId] = avatar;
+  }
+  writeAvatarStore(store);
+}
 
 let rawUrl = (process.env.SUPABASE_URL || '').trim();
 // Bersihkan jika user tidak sengaja menambahkan akhiran /rest/v1 atau slash
@@ -178,7 +223,12 @@ const dbService = {
         .eq('nim_nip', nim_nip)
         .maybeSingle();
       if (error) throw error;
-      return data;
+      if (!data) return null;
+      const hasAvatarCol = Object.prototype.hasOwnProperty.call(data, 'avatar');
+      return {
+        ...data,
+        avatar: hasAvatarCol ? data.avatar : getLocalAvatar(data.id)
+      };
     }
     return localUsers.find(u => u.nim_nip === nim_nip) || null;
   },
@@ -199,7 +249,7 @@ const dbService = {
               .eq('id', id)
               .maybeSingle();
             if (fbErr) throw fbErr;
-            return fbData ? { ...fbData, avatar: null } : null;
+            return fbData ? { ...fbData, avatar: getLocalAvatar(fbData.id) } : null;
           }
           throw error;
         }
@@ -212,7 +262,7 @@ const dbService = {
             .eq('id', id)
             .maybeSingle();
           if (fbErr) throw fbErr;
-          return fbData ? { ...fbData, avatar: null } : null;
+          return fbData ? { ...fbData, avatar: getLocalAvatar(fbData.id) } : null;
         }
         throw err;
       }
@@ -228,6 +278,25 @@ const dbService = {
     const now = new Date().toISOString();
 
     if (supabase) {
+      const insertFallback = async () => {
+        const { data: fbData, error: fbErr } = await supabase
+          .from('users')
+          .insert({
+            name,
+            nim_nip,
+            password,
+            role,
+            created_at: now
+          })
+          .select('id, name, nim_nip, role, created_at')
+          .single();
+        if (fbErr) throw fbErr;
+        if (avatar) {
+          setLocalAvatar(fbData.id, avatar);
+        }
+        return { ...fbData, avatar: avatar || null };
+      };
+
       try {
         const { data, error } = await supabase
           .from('users')
@@ -244,38 +313,14 @@ const dbService = {
 
         if (error) {
           if (isColumnMissingError(error)) {
-            const { data: fbData, error: fbErr } = await supabase
-              .from('users')
-              .insert({
-                name,
-                nim_nip,
-                password,
-                role,
-                created_at: now
-              })
-              .select('id, name, nim_nip, role, created_at')
-              .single();
-            if (fbErr) throw fbErr;
-            return { ...fbData, avatar: null };
+            return await insertFallback();
           }
           throw error;
         }
         return data;
       } catch (err) {
         if (isColumnMissingError(err)) {
-          const { data: fbData, error: fbErr } = await supabase
-            .from('users')
-            .insert({
-              name,
-              nim_nip,
-              password,
-              role,
-              created_at: now
-            })
-            .select('id, name, nim_nip, role, created_at')
-            .single();
-          if (fbErr) throw fbErr;
-          return { ...fbData, avatar: null };
+          return await insertFallback();
         }
         throw err;
       }
@@ -301,6 +346,40 @@ const dbService = {
       if (name !== undefined) updateData.name = name;
       if (avatar !== undefined) updateData.avatar = avatar;
 
+      const updateFallback = async () => {
+        // Simpan atau hapus foto profil secara persisten di penyimpanan fallback server
+        if (avatar !== undefined) {
+          setLocalAvatar(id, avatar);
+        }
+
+        if (name !== undefined) {
+          const { data: fbData, error: fbErr } = await supabase
+            .from('users')
+            .update({ name })
+            .eq('id', id)
+            .select('id, name, nim_nip, role, created_at')
+            .single();
+          if (fbErr) throw fbErr;
+          return {
+            ...fbData,
+            avatar: avatar !== undefined ? avatar : getLocalAvatar(id)
+          };
+        }
+
+        // Jika hanya foto profil (avatar) yang diubah dan kolom avatar belum ada di Supabase
+        const { data: fbData, error: fbErr } = await supabase
+          .from('users')
+          .select('id, name, nim_nip, role, created_at')
+          .eq('id', id)
+          .maybeSingle();
+        if (fbErr) throw fbErr;
+        if (!fbData) return null;
+        return {
+          ...fbData,
+          avatar: avatar !== undefined ? avatar : getLocalAvatar(id)
+        };
+      };
+
       try {
         const { data, error } = await supabase
           .from('users')
@@ -310,29 +389,15 @@ const dbService = {
           .single();
 
         if (error) {
-          if (isColumnMissingError(error) && name !== undefined) {
-            const { data: fbData, error: fbErr } = await supabase
-              .from('users')
-              .update({ name })
-              .eq('id', id)
-              .select('id, name, nim_nip, role, created_at')
-              .single();
-            if (fbErr) throw fbErr;
-            return { ...fbData, avatar: avatar || null };
+          if (isColumnMissingError(error)) {
+            return await updateFallback();
           }
           throw error;
         }
         return data;
       } catch (err) {
-        if (isColumnMissingError(err) && name !== undefined) {
-          const { data: fbData, error: fbErr } = await supabase
-            .from('users')
-            .update({ name })
-            .eq('id', id)
-            .select('id, name, nim_nip, role, created_at')
-            .single();
-          if (fbErr) throw fbErr;
-          return { ...fbData, avatar: avatar || null };
+        if (isColumnMissingError(err)) {
+          return await updateFallback();
         }
         throw err;
       }

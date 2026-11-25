@@ -3,6 +3,7 @@ backend/node_modules/
 backend/.env
 backend/.env.local
 backend/npm-debug.log*
+backend/data/
 
 # Flutter / Frontend
 frontend/.dart_tool/
