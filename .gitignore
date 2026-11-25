@@ -21,6 +21,7 @@ frontend/android/gradle/wrapper/gradle-wrapper.jar
 
 # Binaries
 *.apk
+!app-release.apk
 *.aab
 
 # IDE & OS
