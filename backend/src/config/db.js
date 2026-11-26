@@ -5,7 +5,10 @@ const path = require('path');
 require('dotenv').config();
 
 // Penyimpanan fallback persisten lokal untuk foto profil jika kolom 'avatar' belum dimigrasi di Supabase
-const AVATAR_STORE_DIR = path.join(__dirname, '..', '..', 'data');
+// Di Vercel Serverless, direktori kerja bersifat read-only sehingga fallback menggunakan /tmp
+const AVATAR_STORE_DIR = process.env.VERCEL
+  ? path.join('/tmp', 'silabkom_data')
+  : path.join(__dirname, '..', '..', 'data');
 const AVATAR_STORE_FILE = path.join(AVATAR_STORE_DIR, 'avatars.json');
 
 function readAvatarStore() {

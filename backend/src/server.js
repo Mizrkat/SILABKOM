@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
+const dbService = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const componentRoutes = require('./routes/componentRoutes');
 const loanRoutes = require('./routes/loanRoutes');
@@ -11,7 +12,11 @@ const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -25,9 +30,11 @@ app.use((req, res, next) => {
 // Root / Health Check
 app.get('/', (req, res) => {
   res.json({
-    name: 'RESTful API Sistem Inventaris & Peminjaman Lab Sistem Komputer UNDIP',
+    name: 'RESTful API SILABKOM - Lab Teknik Komputer UNDIP',
     version: '1.0.0',
     status: 'ONLINE',
+    environment: process.env.VERCEL ? 'Vercel Serverless' : 'Local Server',
+    database: dbService.isSupabaseConfigured ? 'Supabase Connected' : 'Local In-Memory Fallback',
     author: 'Teknik Komputer UNDIP - Praktikum PPB 2026',
     endpoints: {
       auth: {
@@ -41,14 +48,16 @@ app.get('/', (req, res) => {
         getOne: 'GET /api/components/:id',
         create: 'POST /api/components',
         update: 'PUT /api/components/:id',
-        delete: 'DELETE /api/components/:id'
+        delete: 'DELETE /api/components/:id',
+        restore: 'POST /api/components/:id/restore'
       },
       loans: {
         getAll: 'GET /api/loans?user_id=&status=',
         getOne: 'GET /api/loans/:id',
         create: 'POST /api/loans',
         updateStatus: 'PATCH /api/loans/:id/status',
-        delete: 'DELETE /api/loans/:id'
+        delete: 'DELETE /api/loans/:id',
+        restore: 'POST /api/loans/:id/restore'
       }
     }
   });
@@ -77,12 +86,16 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start Server
-app.listen(PORT, HOST, () => {
-  console.log('================================================================');
-  console.log('🚀 SERVER RESTful API LAB SISTEM KOMPUTER UNDIP BERJALAN');
-  console.log(`🌐 Local Host      : http://localhost:${PORT}`);
-  console.log(`📱 Android Emulator: http://10.0.2.2:${PORT}`);
-  console.log(`📡 Network Host    : http://${HOST}:${PORT}`);
-  console.log('================================================================');
-});
+// Jalankan HTTP server hanya saat berjalan lokal (bukan di Vercel Serverless)
+if (!process.env.VERCEL && require.main === module) {
+  app.listen(PORT, HOST, () => {
+    console.log('================================================================');
+    console.log('🚀 SERVER RESTful API SILABKOM UNDIP BERJALAN');
+    console.log(`🌐 Local Host      : http://localhost:${PORT}`);
+    console.log(`📱 Android Emulator: http://10.0.2.2:${PORT}`);
+    console.log(`📡 Network Host    : http://${HOST}:${PORT}`);
+    console.log('================================================================');
+  });
+}
+
+module.exports = app;
