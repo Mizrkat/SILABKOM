@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/constants/lab_options.dart';
 import '../../core/network/api_client.dart';
 import '../../core/utils/session_manager.dart';
 import '../../models/component_model.dart';
@@ -19,6 +20,7 @@ class _ComponentListScreenState extends State<ComponentListScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   String _selectedCategory = 'Semua';
+  String _selectedStockFilter = 'Semua'; // 'Semua' | 'Tersedia' | 'Stok Habis'
   bool _isAssistant = false;
   bool _showTrash = false;
 
@@ -28,7 +30,27 @@ class _ComponentListScreenState extends State<ComponentListScreen> {
     'Sensor & Modul',
     'Alat Ukur & Debugger',
     'FPGA & IC',
+    'Lainnya',
   ];
+
+  // Komponen terfilter & terurut: stok habis (stock <= 0) selalu di bagian paling bawah (Poin d)
+  List<ComponentModel> get _displayedComponents {
+    List<ComponentModel> list = List<ComponentModel>.from(_components);
+    if (_selectedCategory == 'Lainnya') {
+      list = list.where((c) => !LabOptions.isMainCategory(c.category)).toList();
+    }
+    if (_selectedStockFilter == 'Tersedia') {
+      list = list.where((c) => c.stock > 0).toList();
+    } else if (_selectedStockFilter == 'Stok Habis') {
+      list = list.where((c) => c.stock <= 0).toList();
+    }
+    list.sort((a, b) {
+      final aOut = a.stock <= 0 ? 1 : 0;
+      final bOut = b.stock <= 0 ? 1 : 0;
+      return aOut.compareTo(bOut);
+    });
+    return list;
+  }
 
   @override
   void initState() {
@@ -60,7 +82,7 @@ class _ComponentListScreenState extends State<ComponentListScreen> {
 
     try {
       final Map<String, String> query = {};
-      if (_selectedCategory != 'Semua') {
+      if (_selectedCategory != 'Semua' && _selectedCategory != 'Lainnya') {
         query['category'] = _selectedCategory;
       }
       if (_searchController.text.trim().isNotEmpty) {
@@ -290,6 +312,12 @@ class _ComponentListScreenState extends State<ComponentListScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final displayedList = _displayedComponents;
+    final otherSubCategories = displayedList
+        .map((c) => c.category.trim())
+        .where((cat) => cat.isNotEmpty)
+        .toSet()
+        .toList();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -438,9 +466,152 @@ class _ComponentListScreenState extends State<ComponentListScreen> {
                       }).toList(),
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  // Poin (d): Filter Stok di bagian paling bawah section filter (termasuk filter Stok Habis)
+                  Row(
+                    children: [
+                      const Icon(Icons.filter_list, size: 15, color: AppColors.textSecondary),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: ['Semua', 'Tersedia', 'Stok Habis'].map((stockOpt) {
+                              final isSelected = _selectedStockFilter == stockOpt;
+                              final isOutOfStockChip = stockOpt == 'Stok Habis';
+                              final activeColor = isOutOfStockChip
+                                  ? AppColors.statusRejected
+                                  : (stockOpt == 'Tersedia'
+                                      ? AppColors.statusApproved
+                                      : AppColors.secondary);
+                              final label = stockOpt == 'Semua' ? 'Semua Stok' : stockOpt;
+
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8.0),
+                                child: ChoiceChip(
+                                  label: Text(
+                                    label,
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : (isOutOfStockChip
+                                              ? AppColors.statusRejected
+                                              : AppColors.textPrimary),
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                    ),
+                                  ),
+                                  selected: isSelected,
+                                  selectedColor: activeColor,
+                                  backgroundColor: isOutOfStockChip
+                                      ? AppColors.statusRejectedBg.withValues(alpha: 0.6)
+                                      : AppColors.surfaceVariant,
+                                  showCheckmark: false,
+                                  visualDensity: VisualDensity.compact,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(18),
+                                    side: BorderSide(
+                                      color: isSelected
+                                          ? activeColor
+                                          : (isOutOfStockChip
+                                              ? AppColors.statusRejected.withValues(alpha: 0.35)
+                                              : AppColors.border),
+                                    ),
+                                  ),
+                                  onSelected: (selected) {
+                                    if (selected) {
+                                      setState(() {
+                                        _selectedStockFilter = stockOpt;
+                                      });
+                                    }
+                                  },
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
+
+            // Poin (e): Card Penjabaran Kategori saat chip 'Lainnya' diklik
+            if (_selectedCategory == 'Lainnya')
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Card(
+                  elevation: 1,
+                  margin: EdgeInsets.zero,
+                  color: AppColors.statusReturningBg.withValues(alpha: 0.65),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: BorderSide(color: AppColors.secondary.withValues(alpha: 0.45)),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.category_outlined, size: 18, color: AppColors.secondary),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Kategori "Lainnya" (Di Luar Kategori Utama)',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryDark,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Menampilkan komponen yang tidak termasuk ke dalam kategori sebelumnya (Mikrokontroler, Sensor & Modul, Alat Ukur & Debugger, dan FPGA & IC), seperti Komponen Pasif & Aktuator, kategori Lainnya, serta kategori khusus buatan asisten:',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: AppColors.textSecondary,
+                            height: 1.35,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: (otherSubCategories.isNotEmpty
+                                  ? otherSubCategories
+                                  : ['Komponen Pasif & Aktuator', 'Kategori Khusus / Lainnya'])
+                              .map((subCat) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: AppColors.secondary.withValues(alpha: 0.4),
+                                ),
+                              ),
+                              child: Text(
+                                subCat,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.secondary,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
 
             // Content List
             Expanded(
@@ -476,7 +647,7 @@ class _ComponentListScreenState extends State<ComponentListScreen> {
                             ),
                           ),
                         )
-                      : _components.isEmpty
+                      : displayedList.isEmpty
                           ? Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -499,9 +670,9 @@ class _ComponentListScreenState extends State<ComponentListScreen> {
                             )
                           : ListView.builder(
                               padding: const EdgeInsets.all(16),
-                              itemCount: _components.length,
+                              itemCount: displayedList.length,
                               itemBuilder: (context, index) {
-                                final comp = _components[index];
+                                final comp = displayedList[index];
                                 final bool hasStock = comp.stock > 0;
 
                                 return Card(
@@ -532,19 +703,34 @@ class _ComponentListScreenState extends State<ComponentListScreen> {
                                           Row(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                          // Icon Box
+                                          // Poin (a): Thumbnail Gambar Komponen atau Fallback Icon Kategori
                                           Container(
-                                            width: 48,
-                                            height: 48,
+                                            width: 52,
+                                            height: 52,
                                             decoration: BoxDecoration(
                                               color: AppColors.primaryLight.withValues(alpha: 0.12),
                                               borderRadius: BorderRadius.circular(12),
                                             ),
-                                            child: Icon(
-                                              _getCategoryIcon(comp.category),
-                                              color: AppColors.primary,
-                                              size: 26,
-                                            ),
+                                            child: comp.image != null && comp.image!.isNotEmpty
+                                                ? ClipRRect(
+                                                    borderRadius: BorderRadius.circular(12),
+                                                    child: LabOptions.buildComponentImage(
+                                                      comp.image,
+                                                      width: 52,
+                                                      height: 52,
+                                                      fit: BoxFit.cover,
+                                                      fallback: Icon(
+                                                        _getCategoryIcon(comp.category),
+                                                        color: AppColors.primary,
+                                                        size: 26,
+                                                      ),
+                                                    ),
+                                                  )
+                                                : Icon(
+                                                    _getCategoryIcon(comp.category),
+                                                    color: AppColors.primary,
+                                                    size: 26,
+                                                  ),
                                           ),
                                           const SizedBox(width: 14),
 

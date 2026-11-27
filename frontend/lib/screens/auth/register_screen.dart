@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/constants/lab_options.dart';
 import '../../core/network/api_client.dart';
 import '../../core/utils/session_manager.dart';
 import '../../models/user_model.dart';
@@ -354,6 +355,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               }
                               if (val.trim().length < 3) {
                                 return 'Nama terlalu pendek (minimal 3 karakter)';
+                              }
+                              if (!LabOptions.studentNameLettersOnlyRegex.hasMatch(val.trim())) {
+                                return 'Nama lengkap hanya boleh berisi huruf dan spasi (tidak boleh angka atau karakter khusus)';
                               }
                               return null;
                             },

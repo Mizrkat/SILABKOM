@@ -1,7 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/constants/lab_options.dart';
 import '../../core/network/api_client.dart';
 import '../../core/utils/session_manager.dart';
 import '../../models/component_model.dart';
@@ -296,74 +299,249 @@ class _ComponentDetailScreenState extends State<ComponentDetailScreen> {
     }
   }
 
-  // Dialog Asisten untuk edit stok alat
+  // Dialog Asisten untuk edit stok, ruangan (dropdown), dan gambar komponen
   void _showEditStockDialog() {
     final stockController = TextEditingController(text: _comp.stock.toString());
+    final List<String> roomChoices = [
+      ...LabOptions.roomOptions,
+      if (!LabOptions.roomOptions.contains(_comp.location) && _comp.location.trim().isNotEmpty)
+        _comp.location,
+    ];
+    String selectedRoom = roomChoices.contains(_comp.location)
+        ? _comp.location
+        : LabOptions.roomOptions.first;
+    String? editedImage = _comp.image;
+    bool imageChanged = false;
+    final picker = ImagePicker();
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Sesuaikan Stok Modul'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Modul: ${_comp.name}'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: stockController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Jumlah Stok Baru',
-                border: OutlineInputBorder(),
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) {
+          Future<void> pickCompImage(ImageSource source) async {
+            try {
+              final XFile? picked = await picker.pickImage(
+                source: source,
+                maxWidth: 600,
+                maxHeight: 600,
+                imageQuality: 75,
+              );
+              if (picked != null) {
+                final bytes = await picked.readAsBytes();
+                setDialogState(() {
+                  editedImage = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+                  imageChanged = true;
+                });
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Gagal mengambil gambar: $e'),
+                    backgroundColor: AppColors.statusRejected,
+                  ),
+                );
+              }
+            }
+          }
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Row(
+              children: [
+                Icon(Icons.edit_note, color: AppColors.primary),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Edit Komponen Lab',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Modul: ${_comp.name}',
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Preview & Upload Gambar Komponen
+                  Container(
+                    height: 130,
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceVariant.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: editedImage != null && editedImage!.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(11),
+                            child: LabOptions.buildComponentImage(
+                              editedImage,
+                              width: double.infinity,
+                              height: 130,
+                              fit: BoxFit.cover,
+                              fallback: const Center(child: Icon(Icons.memory, size: 36)),
+                            ),
+                          )
+                        : const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.add_photo_alternate_outlined, size: 32, color: AppColors.secondary),
+                              SizedBox(height: 4),
+                              Text('Belum ada gambar komponen', style: TextStyle(fontSize: 11.5, color: AppColors.textMuted)),
+                            ],
+                          ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => pickCompImage(ImageSource.gallery),
+                          icon: const Icon(Icons.photo_library, size: 15),
+                          label: const Text('Galeri', style: TextStyle(fontSize: 12)),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            side: const BorderSide(color: AppColors.primary),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => pickCompImage(ImageSource.camera),
+                          icon: const Icon(Icons.camera_alt, size: 15),
+                          label: const Text('Kamera', style: TextStyle(fontSize: 12)),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.secondary,
+                            side: const BorderSide(color: AppColors.secondary),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (editedImage != null && editedImage!.isNotEmpty)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: () {
+                          setDialogState(() {
+                            editedImage = null;
+                            imageChanged = true;
+                          });
+                        },
+                        icon: const Icon(Icons.delete_outline, size: 14, color: AppColors.statusRejected),
+                        label: const Text('Hapus Gambar', style: TextStyle(fontSize: 11.5, color: AppColors.statusRejected)),
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+
+                  // Dropdown Ruangan Laboratorium
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedRoom,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Ruangan Laboratorium',
+                      prefixIcon: Icon(Icons.meeting_room_outlined, color: AppColors.secondary),
+                      border: OutlineInputBorder(),
+                    ),
+                    items: roomChoices.map((room) {
+                      return DropdownMenuItem(
+                        value: room,
+                        child: Text(room, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setDialogState(() {
+                          selectedRoom = val;
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Jumlah Stok
+                  TextField(
+                    controller: stockController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Jumlah Stok Baru',
+                      prefixIcon: Icon(Icons.inventory, color: AppColors.secondary),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final newStock = int.tryParse(stockController.text.trim());
-              if (newStock == null || newStock < 0) return;
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final newStock = int.tryParse(stockController.text.trim());
+                  if (newStock == null || newStock < 0) return;
 
-              Navigator.pop(ctx);
-              try {
-                final res = await ApiClient.put(
-                  ApiEndpoints.componentById(_comp.id),
-                  body: {'stock': newStock},
-                );
-                if (res != null && res['data'] != null) {
+                  Navigator.pop(ctx);
                   setState(() {
-                    _comp = ComponentModel.fromJson(res['data']);
+                    _isSubmitting = true;
                   });
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Stok komponen berhasil diperbarui!'),
-                        backgroundColor: AppColors.statusApproved,
-                      ),
+                  try {
+                    final Map<String, dynamic> body = {
+                      'stock': newStock,
+                      'location': selectedRoom,
+                    };
+                    if (imageChanged) {
+                      body['image'] = editedImage;
+                    }
+                    final res = await ApiClient.put(
+                      ApiEndpoints.componentById(_comp.id),
+                      body: body,
                     );
+                    if (res != null && res['data'] != null && mounted) {
+                      setState(() {
+                        _comp = ComponentModel.fromJson(res['data']);
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Data komponen (stok, ruangan & gambar) berhasil diperbarui!'),
+                          backgroundColor: AppColors.statusApproved,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Gagal memperbarui komponen: $e'),
+                          backgroundColor: AppColors.statusRejected,
+                        ),
+                      );
+                    }
+                  } finally {
+                    if (mounted) {
+                      setState(() {
+                        _isSubmitting = false;
+                      });
+                    }
                   }
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Gagal mengubah stok: $e'),
-                      backgroundColor: AppColors.statusRejected,
-                    ),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            child: const Text('Simpan', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                child: const Text('Simpan', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -598,19 +776,43 @@ class _ComponentDetailScreenState extends State<ComponentDetailScreen> {
                 padding: const EdgeInsets.all(20.0),
                 child: Column(
                   children: [
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
+                    if (_comp.image != null && _comp.image!.isNotEmpty)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: LabOptions.buildComponentImage(
+                          _comp.image,
+                          width: double.infinity,
+                          height: 190,
+                          fit: BoxFit.cover,
+                          fallback: Container(
+                            width: 72,
+                            height: 72,
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryLight.withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.memory,
+                              size: 38,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryLight.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.memory,
+                          size: 38,
+                          color: AppColors.primary,
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.memory,
-                        size: 38,
-                        color: AppColors.primary,
-                      ),
-                    ),
                     const SizedBox(height: 16),
                     Text(
                       _comp.name,
@@ -698,7 +900,7 @@ class _ComponentDetailScreenState extends State<ComponentDetailScreen> {
                     const Divider(height: 24),
                     _buildInfoRow(
                       icon: Icons.place,
-                      label: 'Lokasi Rak / Loker',
+                      label: 'Ruangan Laboratorium',
                       value: _comp.location,
                       color: AppColors.secondary,
                     ),
@@ -761,9 +963,9 @@ class _ComponentDetailScreenState extends State<ComponentDetailScreen> {
                 ),
               ] else ...[
                 ElevatedButton.icon(
-                  onPressed: _showEditStockDialog,
+                  onPressed: _isSubmitting ? null : _showEditStockDialog,
                   icon: const Icon(Icons.edit_note),
-                  label: const Text('Sesuaikan Jumlah Stok Modul'),
+                  label: const Text('Edit Gambar, Ruangan & Stok Modul'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,

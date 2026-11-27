@@ -10,44 +10,78 @@ const AVATAR_STORE_DIR = process.env.VERCEL
   ? path.join('/tmp', 'silabkom_data')
   : path.join(__dirname, '..', '..', 'data');
 const AVATAR_STORE_FILE = path.join(AVATAR_STORE_DIR, 'avatars.json');
+const COMPONENT_IMAGE_STORE_FILE = path.join(AVATAR_STORE_DIR, 'component_images.json');
 
-function readAvatarStore() {
+const MAIN_COMPONENT_CATEGORIES = [
+  'mikrokontroler',
+  'sensor & modul',
+  'alat ukur & debugger',
+  'fpga & ic'
+];
+
+function readJsonStore(filePath) {
   try {
-    if (!fs.existsSync(AVATAR_STORE_FILE)) return {};
-    const raw = fs.readFileSync(AVATAR_STORE_FILE, 'utf8');
+    if (!fs.existsSync(filePath)) return {};
+    const raw = fs.readFileSync(filePath, 'utf8');
     return JSON.parse(raw || '{}');
   } catch (err) {
-    console.warn('⚠️ Gagal membaca avatar store lokal:', err.message);
+    console.warn(`⚠️ Gagal membaca store lokal (${filePath}):`, err.message);
     return {};
   }
 }
 
-function writeAvatarStore(store) {
+function writeJsonStore(filePath, store) {
   try {
     if (!fs.existsSync(AVATAR_STORE_DIR)) {
       fs.mkdirSync(AVATAR_STORE_DIR, { recursive: true });
     }
-    fs.writeFileSync(AVATAR_STORE_FILE, JSON.stringify(store), 'utf8');
+    fs.writeFileSync(filePath, JSON.stringify(store), 'utf8');
   } catch (err) {
-    console.warn('⚠️ Gagal menyimpan avatar store lokal:', err.message);
+    console.warn(`⚠️ Gagal menyimpan store lokal (${filePath}):`, err.message);
   }
 }
 
 function getLocalAvatar(userId) {
   if (!userId) return null;
-  const store = readAvatarStore();
+  const store = readJsonStore(AVATAR_STORE_FILE);
   return store[userId] || null;
 }
 
 function setLocalAvatar(userId, avatar) {
   if (!userId) return;
-  const store = readAvatarStore();
+  const store = readJsonStore(AVATAR_STORE_FILE);
   if (avatar === null || avatar === '') {
     delete store[userId];
   } else if (avatar !== undefined) {
     store[userId] = avatar;
   }
-  writeAvatarStore(store);
+  writeJsonStore(AVATAR_STORE_FILE, store);
+}
+
+function getLocalComponentImage(compId) {
+  if (!compId) return null;
+  const store = readJsonStore(COMPONENT_IMAGE_STORE_FILE);
+  return store[compId] || null;
+}
+
+function setLocalComponentImage(compId, image) {
+  if (!compId) return;
+  const store = readJsonStore(COMPONENT_IMAGE_STORE_FILE);
+  if (image === null || image === '') {
+    delete store[compId];
+  } else if (image !== undefined) {
+    store[compId] = image;
+  }
+  writeJsonStore(COMPONENT_IMAGE_STORE_FILE, store);
+}
+
+function attachComponentImage(comp) {
+  if (!comp) return null;
+  const hasImageCol = Object.prototype.hasOwnProperty.call(comp, 'image');
+  return {
+    ...comp,
+    image: hasImageCol ? (comp.image || null) : getLocalComponentImage(comp.id)
+  };
 }
 
 let rawUrl = (process.env.SUPABASE_URL || '').trim();
@@ -90,7 +124,8 @@ function isColumnMissingError(err) {
       err.message.includes('schema cache') ||
       err.message.includes('is_deleted') ||
       err.message.includes('deleted_at') ||
-      err.message.includes('avatar')
+      err.message.includes('avatar') ||
+      err.message.includes('image')
     ))
   );
 }
@@ -417,11 +452,12 @@ const dbService = {
   // --- COMPONENTS ---
   async getComponents(search, category, isDeleted = false) {
     const wantDeleted = isDeleted === true || isDeleted === 'true';
+    const isOtherCategory = category && category.toLowerCase() === 'lainnya';
 
     if (supabase) {
       const buildQuery = (filterDeleted) => {
         let q = supabase.from('components').select('*').order('created_at', { ascending: false });
-        if (category && category !== 'Semua') {
+        if (category && category !== 'Semua' && !isOtherCategory) {
           q = q.eq('category', category);
         }
         if (search) {
@@ -433,22 +469,30 @@ const dbService = {
         return q;
       };
 
+      const postProcess = (rows) => {
+        let list = (rows || []).map(attachComponentImage);
+        if (isOtherCategory) {
+          list = list.filter(c => !MAIN_COMPONENT_CATEGORIES.includes((c.category || '').toLowerCase()));
+        }
+        return list;
+      };
+
       try {
         const { data, error } = await buildQuery(true);
         if (error) {
           if (isColumnMissingError(error)) {
             const { data: fbData, error: fbErr } = await buildQuery(false);
             if (fbErr) throw fbErr;
-            return wantDeleted ? [] : fbData;
+            return wantDeleted ? [] : postProcess(fbData);
           }
           throw error;
         }
-        return data;
+        return postProcess(data);
       } catch (err) {
         if (isColumnMissingError(err)) {
           const { data: fbData, error: fbErr } = await buildQuery(false);
           if (fbErr) throw fbErr;
-          return wantDeleted ? [] : fbData;
+          return wantDeleted ? [] : postProcess(fbData);
         }
         throw err;
       }
@@ -458,7 +502,11 @@ const dbService = {
     result = result.filter(c => Boolean(c.is_deleted) === wantDeleted);
 
     if (category && category !== 'Semua') {
-      result = result.filter(c => c.category.toLowerCase() === category.toLowerCase());
+      if (isOtherCategory) {
+        result = result.filter(c => !MAIN_COMPONENT_CATEGORIES.includes((c.category || '').toLowerCase()));
+      } else {
+        result = result.filter(c => c.category.toLowerCase() === category.toLowerCase());
+      }
     }
     if (search) {
       const s = search.toLowerCase();
@@ -480,7 +528,7 @@ const dbService = {
         .eq('id', id)
         .maybeSingle();
       if (error) throw error;
-      return data;
+      return attachComponentImage(data);
     }
     return localComponents.find(c => c.id === id) || null;
   },
@@ -494,6 +542,7 @@ const dbService = {
       location: componentData.location,
       description: componentData.description || '',
       datasheet_url: componentData.datasheet_url || '',
+      image: componentData.image || null,
       is_deleted: false,
       deleted_at: null,
       created_at: new Date().toISOString()
@@ -506,20 +555,35 @@ const dbService = {
         .select()
         .single();
 
-      // Fallback jika tabel Supabase belum dimigrasi dengan kolom is_deleted
+      // Fallback jika tabel Supabase belum dimigrasi dengan kolom image atau is_deleted
       if (res.error && isColumnMissingError(res.error)) {
         const fallbackComp = { ...newComponent };
-        delete fallbackComp.is_deleted;
-        delete fallbackComp.deleted_at;
+        delete fallbackComp.image;
         res = await supabase
           .from('components')
           .insert([fallbackComp])
           .select()
           .single();
+
+        if (res.error && isColumnMissingError(res.error)) {
+          delete fallbackComp.is_deleted;
+          delete fallbackComp.deleted_at;
+          res = await supabase
+            .from('components')
+            .insert([fallbackComp])
+            .select()
+            .single();
+        }
+
+        if (res.error) throw res.error;
+        if (componentData.image) {
+          setLocalComponentImage(res.data.id, componentData.image);
+        }
+        return { ...res.data, image: componentData.image || null };
       }
 
       if (res.error) throw res.error;
-      return res.data;
+      return attachComponentImage(res.data);
     }
 
     localComponents.unshift(newComponent);
@@ -534,8 +598,44 @@ const dbService = {
         .eq('id', id)
         .select()
         .single();
-      if (error) throw error;
-      return data;
+
+      if (error) {
+        if (isColumnMissingError(error)) {
+          if (updateData.image !== undefined) {
+            setLocalComponentImage(id, updateData.image);
+          }
+          const cleanUpdate = { ...updateData };
+          delete cleanUpdate.image;
+
+          if (Object.keys(cleanUpdate).length > 0) {
+            const { data: fbData, error: fbErr } = await supabase
+              .from('components')
+              .update(cleanUpdate)
+              .eq('id', id)
+              .select()
+              .single();
+            if (fbErr) throw fbErr;
+            return {
+              ...fbData,
+              image: updateData.image !== undefined ? updateData.image : getLocalComponentImage(id)
+            };
+          }
+
+          const { data: existingData, error: fetchErr } = await supabase
+            .from('components')
+            .select('*')
+            .eq('id', id)
+            .maybeSingle();
+          if (fetchErr) throw fetchErr;
+          if (!existingData) return null;
+          return {
+            ...existingData,
+            image: updateData.image !== undefined ? updateData.image : getLocalComponentImage(id)
+          };
+        }
+        throw error;
+      }
+      return attachComponentImage(data);
     }
 
     const index = localComponents.findIndex(c => c.id === id);

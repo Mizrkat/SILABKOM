@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/api_endpoints.dart';
+import '../../core/constants/lab_options.dart';
 import '../../core/network/api_client.dart';
 import '../../core/utils/session_manager.dart';
 import '../../widgets/server_config_dialog.dart';
@@ -111,6 +112,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 validator: (val) {
                   if (val == null || val.trim().isEmpty) return 'Nama tidak boleh kosong';
                   if (val.trim().length < 3) return 'Nama minimal 3 karakter';
+                  if (_userRole == 'student' &&
+                      !LabOptions.studentNameLettersOnlyRegex.hasMatch(val.trim())) {
+                    return 'Nama lengkap hanya boleh berisi huruf dan spasi (tidak boleh angka atau karakter khusus)';
+                  }
                   return null;
                 },
               ),

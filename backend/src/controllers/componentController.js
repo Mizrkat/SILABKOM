@@ -60,7 +60,7 @@ exports.getComponentById = async (req, res) => {
  */
 exports.createComponent = async (req, res) => {
   try {
-    const { name, category, stock, location, description, datasheet_url } = req.body;
+    const { name, category, stock, location, description, datasheet_url, image } = req.body;
 
     if (!name || !category || stock === undefined || !location) {
       return res.status(400).json({
@@ -75,7 +75,8 @@ exports.createComponent = async (req, res) => {
       stock: parseInt(stock, 10),
       location,
       description: description || '',
-      datasheet_url: datasheet_url || ''
+      datasheet_url: datasheet_url || '',
+      image: image || null
     });
 
     return res.status(201).json({

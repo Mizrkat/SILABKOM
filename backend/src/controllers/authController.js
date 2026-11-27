@@ -1,5 +1,8 @@
 const dbService = require('../config/db');
 
+// Validasi nama mahasiswa: hanya huruf alfabet dan spasi (tanpa angka/karakter khusus)
+const LETTERS_ONLY_REGEX = /^[a-zA-Z\s]+$/;
+
 /**
  * Controller untuk Autentikasi Pengguna
  * POST /api/auth/login
@@ -64,6 +67,13 @@ exports.register = async (req, res) => {
 
     const cleanNim = nim_nip.trim();
     const cleanName = name.trim();
+
+    if (!LETTERS_ONLY_REGEX.test(cleanName)) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Nama lengkap hanya boleh berisi huruf dan spasi, tidak boleh angka atau karakter khusus.'
+      });
+    }
 
     if (cleanNim.length < 5) {
       return res.status(400).json({
@@ -146,6 +156,13 @@ exports.updateProfile = async (req, res) => {
       return res.status(404).json({
         status: 'fail',
         message: 'Pengguna tidak ditemukan.'
+      });
+    }
+
+    if (name && user.role === 'student' && !LETTERS_ONLY_REGEX.test(name.trim())) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Nama lengkap mahasiswa hanya boleh berisi huruf dan spasi, tidak boleh angka atau karakter khusus.'
       });
     }
 
