@@ -78,15 +78,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Helper pengisian cepat akun demo untuk pengujian responsi
-  void _fillCredentials(String nim, String pass) {
-    setState(() {
-      _nimController.text = nim;
-      _passwordController.text = pass;
-      _errorMessage = null;
-    });
-  }
-
   Future<void> _openServerConfig() async {
     final changed = await ServerConfigDialog.show(context);
     if (changed == true && mounted) {
@@ -109,14 +100,14 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Tombol Pengaturan Server URL API (Sangat penting saat ganti IP HP Fisik)
+                // Tombol Pengaturan Server URL API
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton.icon(
                     onPressed: _openServerConfig,
                     icon: const Icon(Icons.dns_outlined, size: 15, color: AppColors.secondary),
                     label: Text(
-                      'Server: ${ApiEndpoints.currentBaseUrl.replaceAll('http://', '')}',
+                      'Server: ${ApiEndpoints.currentBaseUrl.replaceAll('https://', '').replaceAll('http://', '')}',
                       style: const TextStyle(
                         fontSize: 11,
                         color: AppColors.secondary,
@@ -239,7 +230,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     onPressed: _openServerConfig,
                                     icon: const Icon(Icons.wifi_tethering, size: 14),
                                     label: const Text(
-                                      'Ubah Alamat IP Server Laptop',
+                                      'Pengaturan Server API',
                                       style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
                                     ),
                                     style: OutlinedButton.styleFrom(
@@ -375,69 +366,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Quick Switch Demo Akun (Sangat praktis saat responsi)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.bolt, size: 16, color: AppColors.statusPending),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Pintasan Uji Akun Responsi',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _fillCredentials('21120124120017', 'mahasiswa123'),
-                              icon: const Icon(Icons.school, size: 16, color: AppColors.secondary),
-                              label: const Text('Mahasiswa', style: TextStyle(fontSize: 12)),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                                side: const BorderSide(color: AppColors.border),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _fillCredentials('199801012023011001', 'asisten123'),
-                              icon: const Icon(Icons.admin_panel_settings, size: 16, color: AppColors.primary),
-                              label: const Text('Asisten Lab', style: TextStyle(fontSize: 12)),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                                side: const BorderSide(color: AppColors.border),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
                   ),
                 ),
               ],

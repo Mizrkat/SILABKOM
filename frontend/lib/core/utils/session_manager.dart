@@ -8,7 +8,7 @@ class SessionManager {
   static const String _keyUserNim = 'user_nim_nip';
   static const String _keyUserRole = 'user_role';
   static const String _keyUserAvatar = 'user_avatar';
-  static const String _keyCustomApiUrl = 'custom_api_url';
+  static const String _keyCustomApiUrl = 'custom_api_url_v2';
 
   // Simpan data login pengguna
   static Future<void> saveUserSession({

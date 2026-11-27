@@ -1,15 +1,8 @@
-import 'dart:io';
-
 class ApiEndpoints {
-  // Base Host default: 10.0.2.2 untuk Android emulator, localhost untuk lainnya
-  static String get defaultBaseUrl {
-    if (Platform.isAndroid) {
-      return 'http://10.0.2.2:3000';
-    }
-    return 'http://localhost:3000';
-  }
+  // Base Host default: Backend Cloud Vercel SILABKOM
+  static const String defaultBaseUrl = 'https://silabkom-iota.vercel.app';
 
-  // Active base URL (dapat diperbarui dinamis dari SessionManager saat testing di device fisik)
+  // Active base URL (dapat diperbarui dinamis dari SessionManager jika ingin pindah server)
   static String currentBaseUrl = defaultBaseUrl;
 
   // Endpoint Paths

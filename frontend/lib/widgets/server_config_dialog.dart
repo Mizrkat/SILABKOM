@@ -144,7 +144,7 @@ class _ServerConfigDialogState extends State<ServerConfigDialog> {
                         ),
                         SizedBox(height: 2),
                         Text(
-                          'Pilih atau masukkan IP Backend Laptop Anda',
+                          'Pilih server Cloud Vercel atau server lokal',
                           style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                         ),
                       ],
@@ -154,7 +154,7 @@ class _ServerConfigDialogState extends State<ServerConfigDialog> {
               ),
               const SizedBox(height: 18),
 
-              // Info Box Penjelasan HP Fisik
+              // Info Box Penjelasan Server
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -169,7 +169,7 @@ class _ServerConfigDialogState extends State<ServerConfigDialog> {
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'HP Fisik Android wajib menggunakan IP Wi-Fi Laptop (misal: 192.168.1.x) dan berada di jaringan Wi-Fi yang sama. "10.0.2.2" hanya untuk emulator.',
+                        'Secara default aplikasi terhubung ke server Cloud Vercel (dapat diakses dari jaringan mana saja). Gunakan IP lokal atau 10.0.2.2 hanya jika ingin menguji backend lokal.',
                         style: TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.3),
                       ),
                     ),
@@ -189,11 +189,11 @@ class _ServerConfigDialogState extends State<ServerConfigDialog> {
                 runSpacing: 6,
                 children: [
                   ActionChip(
-                    avatar: const Icon(Icons.wifi, size: 14, color: AppColors.primary),
-                    label: const Text('HP Fisik (Wi-Fi 192.168.1.2)', style: TextStyle(fontSize: 11)),
+                    avatar: const Icon(Icons.cloud_done, size: 14, color: AppColors.primary),
+                    label: const Text('Cloud Vercel (Default)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
                     backgroundColor: Colors.white,
-                    side: const BorderSide(color: AppColors.primaryLight),
-                    onPressed: () => _setPreset('http://192.168.1.2:3000'),
+                    side: const BorderSide(color: AppColors.primary),
+                    onPressed: () => _setPreset(ApiEndpoints.defaultBaseUrl),
                   ),
                   ActionChip(
                     avatar: const Icon(Icons.phone_android, size: 14, color: AppColors.secondary),
@@ -219,7 +219,7 @@ class _ServerConfigDialogState extends State<ServerConfigDialog> {
                 keyboardType: TextInputType.url,
                 decoration: InputDecoration(
                   labelText: 'Alamat Server Base URL',
-                  hintText: 'http://192.168.1.2:3000',
+                  hintText: ApiEndpoints.defaultBaseUrl,
                   prefixIcon: const Icon(Icons.link, color: AppColors.secondary),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   filled: true,
